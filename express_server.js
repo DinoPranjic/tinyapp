@@ -159,6 +159,15 @@ app.post("/register", (req, res) => {
 }
 })
 
+app.get("/login", (req, res) => {
+  const templateVars = {
+    username: users[req.cookies["user_id"]]
+
+  }
+
+  res.render("login", templateVars)
+})
+
 app.post("/login", (req, res) => {
   const userInput = req.body.username;
 
