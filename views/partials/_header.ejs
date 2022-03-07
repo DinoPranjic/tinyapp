@@ -16,12 +16,12 @@
         <button type="submit" class="btn btn-primary">LOGOUT</button>
         </form>
         <% } else{ %>
-          <form class="form-inline" action="/login" method="POST">
-            <div class="form-group mb-2">
-            <input class="form-control" type="text" name="username" placeholder="Username" style="width: 150px; margin: 1em">
-            <button type="submit" class="btn btn-primary">Sign in</button>
-          </div>
-        </form>
+          <a href="/register">Create an account</a>
+          <div class ="row"> 
+            <div class="col-sm"></div>
+            <form method="GET" action="/login">
+            <button type="submit" class= "btn btn-primary">Log In</button>
+            </form>
         <% } %>
       </div>
     </div>
