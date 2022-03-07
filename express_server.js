@@ -105,6 +105,15 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.render("urls_index", templateVars);
 })
 
+app.get("/register", (req, res) => {
+
+  const templateVars = {
+    username: req.cookies["username"]
+  };
+
+  res.render("registration", templateVars);
+})
+
 app.post("/login", (req, res) => {
   const userInput = req.body.username;
 
