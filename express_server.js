@@ -9,8 +9,13 @@ app.use(cookieParser())
 app.set("view engine", "ejs");
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": {
+    longURL: "http://www.lighthouselabs.ca",
+    userID: "default"
+  },
+  "9sm5xK": {
+    longURL: "http://www.google.com",
+    userID: "default"}
 };
 
 const users = {};
@@ -65,18 +70,30 @@ app.get("/urls/new", (req, res) => {
   const templateVars = {
     username: users[req.cookies["user_id"]]
   };
+
+  if (!users[req.cookies["user_id"]]) {
+    return res.redirect("/login")
+  }
+
   res.render("urls_new", templateVars);
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  let longURL;
+
+  if (urlDatabase[req.params.shortURL]) {
+    longURL = urlDatabase[req.params.shortURL]["longURL"]
+  } else {
+    return res.status(400).send('Sorry! That URL doesn\'t seem to exist!');
+  }
+
   res.redirect(longURL);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { 
     shortURL: req.params.shortURL, 
-    longURL: `${urlDatabase[req.params.shortURL]}`,
+    longURL: urlDatabase[req.params.shortURL]["longURL"],
     username: users[req.cookies["user_id"]]};
 
   res.render("urls_show", templateVars);
@@ -90,12 +107,21 @@ app.post("/urls", (req, res) => {
   const longURL = req.body.longURL;
   const newURL = generateRandomString();
 
+  if (!users[req.cookies["user_id"]]) {
+    return res.status(400).send('You must be logged in to add a short URL!');
+  }
 
-  urlDatabase[newURL] = longURL;
+
+  urlDatabase[newURL] = {
+    longURL: longURL,
+    userID: req.cookies["user_id"]
+  }
+
+  console.log(urlDatabase);
 
   const templateVars = { 
     shortURL: `${newURL}`, 
-    longURL: `${longURL}`,
+    longURL: `${urlDatabase[newURL]["longURL"]}`,
     username: users[req.cookies["user_id"]]};
 
   res.render("urls_show", templateVars);
