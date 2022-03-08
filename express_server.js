@@ -90,6 +90,7 @@ app.post("/urls", (req, res) => {
   const longURL = req.body.longURL;
   const newURL = generateRandomString();
 
+
   urlDatabase[newURL] = longURL;
 
   const templateVars = { 
@@ -131,6 +132,10 @@ app.get("/register", (req, res) => {
     username: users[req.cookies["user_id"]]
   };
 
+  if (users[req.cookies["user_id"]]) {
+    return res.redirect("/urls");
+  }
+
   res.render("registration", templateVars);
 })
 
@@ -141,11 +146,11 @@ app.post("/register", (req, res) => {
 
 
   if (userEmail === "" || userPassword === "") {
-    res.status(400).send('Invalid email or password');
+    return res.status(400).send('Invalid email or password');
   }
 
   if (emailLookUp(userEmail, false)) {
-    res.status(400).send('That email is already in use.');
+    return res.status(400).send('That email is already in use.');
   } 
 
   else {
@@ -155,12 +160,7 @@ app.post("/register", (req, res) => {
     "password": userPassword
   };
 
-  console.log(users);
-
-
   res.cookie("user_id", userID);
-
-
   res.redirect("/urls")
 }
 })
@@ -169,6 +169,10 @@ app.get("/login", (req, res) => {
   const templateVars = {
     username: users[req.cookies["user_id"]]
 
+  }
+
+  if(users[req.cookies["user_id"]]) {
+    return res.redirect("/urls");
   }
 
   res.render("login", templateVars)
