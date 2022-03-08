@@ -12,6 +12,8 @@
       </div>
       <% if(username){ %>
         <h4 class="card-text">Logged in as: <%= username["email"] %> </h4>
+        <div class ="row"> 
+          <div class="col-sm"></div>
         <form class="form-inline" action="/logout" method="POST">
         <button type="submit" class="btn btn-primary">LOGOUT</button>
         </form>
