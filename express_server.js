@@ -26,10 +26,14 @@ const generateRandomString = () => {
   return result;
 }
 
-const emailLookUp = (input) => {
+const emailLookUp = (input, needKey) => {
   for (const key in users) {
     if (users[key]["email"] === input) {
+      if (!needKey) {
       return true;
+      } else {
+        return key;
+      }
     } else {
       continue;
     }
@@ -37,6 +41,8 @@ const emailLookUp = (input) => {
   return false;
     
 };
+
+
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -138,7 +144,7 @@ app.post("/register", (req, res) => {
     res.status(400).send('Invalid email or password');
   }
 
-  if (emailLookUp(userEmail)) {
+  if (emailLookUp(userEmail, false)) {
     res.status(400).send('That email is already in use.');
   } 
 
@@ -169,10 +175,22 @@ app.get("/login", (req, res) => {
 })
 
 app.post("/login", (req, res) => {
-  const userInput = req.body.username;
+  const inputEmail = req.body.email;
+  const inputPassword = req.body.password;
+  let userID = "";
 
-  res.cookie("username", userInput);
-  res.redirect("/urls");
+  if (emailLookUp(inputEmail, false)) {
+    userID = emailLookUp(inputEmail, true);
+  } else {
+    res.status(403).send("Incorrect Username");
+  }
+
+  if (users[userID]["password"] !== inputPassword) {
+    res.status(403).send("Incorrect password");
+  } else {  
+      res.cookie("user_id", userID);
+      res.redirect("/urls");
+}
   
 });
 
