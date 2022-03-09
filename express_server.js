@@ -5,6 +5,7 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require('cookie-parser')
 app.use(cookieParser())
+const bcrypt = require('bcryptjs');
 
 app.set("view engine", "ejs");
 
@@ -182,11 +183,15 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   if (urlDatabase[shortURL]["userID"] !== req.cookies["user_id"]) {
     return res.status(400).send('This URL does not belong to you!');
   }
-
+  
+  //delete URL from database
   delete urlDatabase[shortURL];
 
+  //recreate new database with all URLS owned by user
+  const UserUrlDatabase = urlsForUser(req.cookies["user_id"]);
+
   const templateVars = { 
-    urls: urlDatabase,
+    urls: UserUrlDatabase,
     username: users[req.cookies["user_id"]] };
   res.render("urls_index", templateVars);
 })
@@ -208,6 +213,7 @@ app.post("/register", (req, res) => {
   const userID = generateRandomString();
   const userEmail = req.body.email;
   const userPassword = req.body.password;
+  const hashedPassword = bcrypt.hashSync(userPassword, 10);
 
 
   if (userEmail === "" || userPassword === "") {
@@ -222,7 +228,7 @@ app.post("/register", (req, res) => {
     users[userID] = {
     "id": userID,
     "email": userEmail,
-    "password": userPassword
+    "password": hashedPassword
   };
 
   res.cookie("user_id", userID);
@@ -254,7 +260,7 @@ app.post("/login", (req, res) => {
     res.status(403).send("Incorrect Username");
   }
 
-  if (users[userID]["password"] !== inputPassword) {
+  if (!bcrypt.compareSync(inputPassword, users[userID]["password"])){
     res.status(403).send("Incorrect password");
   } else {  
       res.cookie("user_id", userID);
@@ -266,7 +272,7 @@ app.post("/login", (req, res) => {
 app.post("/logout", (req, res) => {
 
   res.clearCookie("user_id");
-  res.redirect("/urls");
+  res.redirect("/login");
 })
 
 
