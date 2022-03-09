@@ -47,6 +47,16 @@ const emailLookUp = (input, needKey) => {
     
 };
 
+const urlsForUser = (id) => {
+  const newDatabase = {};
+  for (const key in urlDatabase) {
+    if (urlDatabase[key]["userID"] === id) {
+      newDatabase[key] = urlDatabase[key]
+    }
+  }
+  return newDatabase;
+}
+
 
 
 app.get("/", (req, res) => {
@@ -58,10 +68,16 @@ app.get("/urls.json", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+  const UserUrlDatabase = urlsForUser(req.cookies["user_id"]);
+
   const templateVars = { 
     username: users[req.cookies["user_id"]],
-    urls: urlDatabase 
+    urls: UserUrlDatabase 
   };
+
+  if (!users[req.cookies["user_id"]]) {
+    return res.status(400).send('You must be logged in to view URLs')
+  }
 
   res.render("urls_index", templateVars);
 });
@@ -117,8 +133,6 @@ app.post("/urls", (req, res) => {
     userID: req.cookies["user_id"]
   }
 
-  console.log(urlDatabase);
-
   const templateVars = { 
     shortURL: `${newURL}`, 
     longURL: `${urlDatabase[newURL]["longURL"]}`,
@@ -131,7 +145,17 @@ app.post("/urls/:id", (req, res) => {
   const shortURL = req.params.id;
   const newLongURL = req.body.longURL;
 
-  urlDatabase[shortURL] = newLongURL;
+  //checks if user is logged in first
+  if (!users[req.cookies["user_id"]]) {
+    return res.status(400).send('You must be logged in to do that!')
+  }
+
+  //if user is not owner of URL display this message
+  if(urlDatabase[shortURL]["userID"] !== req.cookies["user_id"]) {
+    return res.status(400).send('That URL does not belong to you!')
+  }
+
+  urlDatabase[shortURL]["longURL"] = newLongURL;
 
   const templateVars = { 
     shortURL: `${shortURL}`, 
@@ -143,6 +167,21 @@ app.post("/urls/:id", (req, res) => {
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
+
+  //checks if URL exists
+  if (!urlDatabase[shortURL]) {
+    return res.status(400).send('That URL does not exist!');
+  }
+
+  //checks if user is logged in 
+  if (!users[req.cookies["user_id"]]) {
+    return res.status(400).send('You must be logged in to do that!');
+  }
+
+  //checks if user owns the URL
+  if (urlDatabase[shortURL]["userID"] !== req.cookies["user_id"]) {
+    return res.status(400).send('This URL does not belong to you!');
+  }
 
   delete urlDatabase[shortURL];
 
