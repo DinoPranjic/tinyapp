@@ -8,7 +8,7 @@ const emailLookUp = (email, database) => {
       continue;
     }
   }
-  return false;
+  return undefined;
 }
 
 
@@ -17,8 +17,8 @@ const urlsForUser = (id, database) => {
   for (const key in database) {
     if (database[key]["userID"] === id) {
       newDatabase[key] = database[key];
-    }
-  }
+    } 
+  } 
   return newDatabase;
 }
 
