@@ -5,6 +5,7 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 const bcrypt = require('bcryptjs');
 const cookieSession = require('cookie-session');
+const { emailLookUp, urlsForUser, generateRandomString } = require('./helpers')
 
 app.use(cookieSession({
   name: 'session',
@@ -28,45 +29,6 @@ const urlDatabase = {
 
 const users = {};
 
-const generateRandomString = () => {
-  result = '';
-  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  
-  for (let i = 0; i < 6; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-
-  return result;
-}
-
-const emailLookUp = (input, needKey) => {
-  for (const key in users) {
-    if (users[key]["email"] === input) {
-      if (!needKey) {
-      return true;
-      } else {
-        return key;
-      }
-    } else {
-      continue;
-    }
-  }
-  return false;
-    
-};
-
-const urlsForUser = (id) => {
-  const newDatabase = {};
-  for (const key in urlDatabase) {
-    if (urlDatabase[key]["userID"] === id) {
-      newDatabase[key] = urlDatabase[key]
-    }
-  }
-  return newDatabase;
-}
-
-
-
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -76,7 +38,7 @@ app.get("/urls.json", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const UserUrlDatabase = urlsForUser(req.session.user_id);
+  const UserUrlDatabase = urlsForUser(req.session.user_id, urlDatabase);
 
   const templateVars = { 
     username: users[req.session.user_id],
@@ -227,7 +189,7 @@ app.post("/register", (req, res) => {
     return res.status(400).send('Invalid email or password');
   }
 
-  if (emailLookUp(userEmail, false)) {
+  if (emailLookUp(userEmail, users)) {
     return res.status(400).send('That email is already in use.');
   } 
 
@@ -239,8 +201,6 @@ app.post("/register", (req, res) => {
     "email": userEmail,
     "password": hashedPassword
   };
-
-  console.log(users);
 
   res.redirect("/urls")
 }
@@ -264,8 +224,8 @@ app.post("/login", (req, res) => {
   const inputPassword = req.body.password;
   let userID = "";
 
-  if (emailLookUp(inputEmail, false)) {
-    userID = emailLookUp(inputEmail, true);
+  if (emailLookUp(inputEmail, users)) {
+    userID = emailLookUp(inputEmail, users);
   } else {
     res.status(403).send("Incorrect Username");
   }
