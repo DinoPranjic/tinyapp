@@ -17,6 +17,9 @@ Custom short URLs created by a user.
 !["The registration page"](https://github.com/DinoPranjic/tinyapp/blob/master/docs/registration-page.png?raw=true)
 Account creation page.
 
+!["Custom error page"](https://github.com/DinoPranjic/tinyapp/blob/master/docs/error-page.png?raw=true)
+Custom error page.
+
 ## Dependencies
 
 - Node.js
