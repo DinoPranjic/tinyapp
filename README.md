@@ -9,8 +9,13 @@ Users can create accounts and create short URLs. Only verified users can view an
 ## Final Product
 
 !["No homepage is complete without a Drake meme"](https://github.com/DinoPranjic/tinyapp/blob/master/docs/Homepage.png?raw=true)
+No homepage is complete without a Drake meme!
+
 !["The url page"](https://github.com/DinoPranjic/tinyapp/blob/master/docs/urls-page.png?raw=true)
+Custom short URLs created by a user.
+
 !["The registration page"](https://github.com/DinoPranjic/tinyapp/blob/master/docs/registration-page.png?raw=true)
+Account creation page.
 
 ## Dependencies
 
