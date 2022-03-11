@@ -1,52 +1,68 @@
 const express = require("express");
 const app = express();
+
 const PORT = 8080; // default port 8080
+
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
-const bcrypt = require('bcryptjs');
-const cookieSession = require('cookie-session');
-const { emailLookUp, urlsForUser, generateRandomString } = require('./helpers')
 
+const bcrypt = require('bcryptjs');
+
+const cookieSession = require('cookie-session');
+
+// helper functions
+const { emailLookUp, urlsForUser, generateRandomString } = require('./helpers');
+
+// allows for images in ejs templates
+app.use(express.static('docs'));
+
+//sets encrypted cookies
 app.use(cookieSession({
   name: 'session',
   keys: ["dino"],
 
   // Cookie Options
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
-}))
+}));
 
 app.set("view engine", "ejs");
 
-const urlDatabase = {
-  "b2xVn2": {
-    longURL: "http://www.lighthouselabs.ca",
-    userID: "default"
-  },
-  "9sm5xK": {
-    longURL: "http://www.google.com",
-    userID: "default"}
-};
+const urlDatabase = {};
 
 const users = {};
 
+//Homepage
 app.get("/", (req, res) => {
-  res.redirect('/login');
+  const templateVars = {
+    "username": users[req.session.user_id]
+  };
+
+  res.render('welcome', templateVars);
+  
 });
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+// main urls page
 app.get("/urls", (req, res) => {
   const UserUrlDatabase = urlsForUser(req.session.user_id, urlDatabase);
 
-  const templateVars = { 
+  const templateVars = {
     username: users[req.session.user_id],
-    urls: UserUrlDatabase 
+    urls: UserUrlDatabase
   };
 
+  //checks if user is logged on
   if (!users[req.session.user_id]) {
-    return res.status(400).send('You must be logged in to view URLs')
+    const templateVars = {
+      "error" : {
+        "msg": "You must be logged in to view URLs!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
   }
 
   res.render("urls_index", templateVars);
@@ -57,8 +73,15 @@ app.get("/urls/new", (req, res) => {
     username: users[req.session.user_id]
   };
 
+  // Checks if user is logged on
   if (!users[req.session.user_id]) {
-    return res.redirect("/login")
+    const templateVars = {
+      "error" : {
+        "msg": "You must be logged in to create short URLS!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.render('error', templateVars);
   }
 
   res.render("urls_new", templateVars);
@@ -67,18 +90,35 @@ app.get("/urls/new", (req, res) => {
 app.get("/u/:shortURL", (req, res) => {
   let longURL;
 
+  //checks if url exists first
   if (urlDatabase[req.params.shortURL]) {
-    longURL = urlDatabase[req.params.shortURL]["longURL"]
+    longURL = urlDatabase[req.params.shortURL]["longURL"];
   } else {
-    return res.status(400).send('Sorry! That URL doesn\'t seem to exist!');
+    const templateVars = {
+      "error" : {
+        "msg": "Sorry! That URL doesn't seem to exist!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
   }
 
   res.redirect(longURL);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { 
-    shortURL: req.params.shortURL, 
+  if (!users[req.session.user_id]) {
+    const templateVars = {
+      "error" : {
+        "msg": "You must be logged in to do that!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
+  }
+
+  const templateVars = {
+    shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL]["longURL"],
     username: users[req.session.user_id]};
 
@@ -90,17 +130,23 @@ app.post("/urls", (req, res) => {
   const newURL = generateRandomString();
 
   if (!users[req.session.user_id]) {
-    return res.status(400).send('You must be logged in to add a short URL!');
+    const templateVars = {
+      "error" : {
+        "msg": "You must be logged in to add a short URL!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
   }
 
 
   urlDatabase[newURL] = {
     longURL: longURL,
     userID: req.session.user_id
-  }
+  };
 
-  const templateVars = { 
-    shortURL: `${newURL}`, 
+  const templateVars = {
+    shortURL: `${newURL}`,
     longURL: `${urlDatabase[newURL]["longURL"]}`,
     username: users[req.session.user_id]};
 
@@ -113,40 +159,71 @@ app.post("/urls/:id", (req, res) => {
 
   //checks if user is logged in first
   if (!users[req.session.user_id]) {
-    return res.status(400).send('You must be logged in to do that!')
+    const templateVars = {
+      "error" : {
+        "msg": "You must be logged in to do that!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
   }
 
   //if user is not owner of URL display this message
-  if(urlDatabase[shortURL]["userID"] !== req.session.user_id) {
-    return res.status(400).send('That URL does not belong to you!')
+  if (urlDatabase[shortURL]["userID"] !== req.session.user_id) {
+    const templateVars = {
+      "error" : {
+        "msg": "That URL does not belong to you!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
   }
 
   urlDatabase[shortURL]["longURL"] = newLongURL;
 
-  const templateVars = { 
-    shortURL: `${shortURL}`, 
+  const templateVars = {
+    shortURL: `${shortURL}`,
     longURL: `${newLongURL}`,
-    username: users[req.session.user_id] }
+    username: users[req.session.user_id] };
+
   res.render("urls_show", templateVars);
 
-})
+});
 
 app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL;
 
   //checks if URL exists
   if (!urlDatabase[shortURL]) {
-    return res.status(400).send('That URL does not exist!');
+    const templateVars = {
+      "error" : {
+        "msg": "That URL does not exist!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
   }
 
-  //checks if user is logged in 
+  //checks if user is logged in
   if (!users[req.session.user_id]) {
-    return res.status(400).send('You must be logged in to do that!');
+    const templateVars = {
+      "error" : {
+        "msg": "You must be logged in to do that!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
   }
 
   //checks if user owns the URL
   if (urlDatabase[shortURL]["userID"] !== req.session.user_id) {
-    return res.status(400).send('This URL does not belong to you!');
+    const templateVars = {
+      "error" : {
+        "msg": "This URL does not belong to you!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
   }
 
   //delete URL from database
@@ -155,11 +232,12 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   //recreate new database with all URLS owned by user
   const UserUrlDatabase = urlsForUser(req.session.user_id);
 
-  const templateVars = { 
+  //send mofified database and user back to urls page
+  const templateVars = {
     urls: UserUrlDatabase,
     username: users[req.session.user_id] };
   res.render("urls_index", templateVars);
-})
+});
 
 app.get("/register", (req, res) => {
 
@@ -172,48 +250,62 @@ app.get("/register", (req, res) => {
   }
 
   res.render("registration", templateVars);
-})
+});
 
 app.post("/register", (req, res) => {
   const userID = generateRandomString();
   const userEmail = req.body.email;
   const userPassword = req.body.password;
+  // hashes password
   const hashedPassword = bcrypt.hashSync(userPassword, 10);
 
-
+  // checks if email and password are empty strings
   if (userEmail === "" || userPassword === "") {
-    return res.status(400).send('Invalid email or password');
+    const templateVars = {
+      "error" : {
+        "msg": "Invalid Email or password!"
+      },
+      "username": users[req.session.user_id]
+    };
+
+    return res.status(400).render('error', templateVars);
   }
 
+  // checks if email is already in use
   if (emailLookUp(userEmail, users)) {
-    return res.status(400).send('That email is already in use.');
-  } 
-
-  else {
+    const templateVars = {
+      "error" : {
+        "msg": "That email is already in use!"
+      },
+      "username": users[req.session.user_id]
+    };
+    return res.status(400).render('error', templateVars);
+  } else {
     req.session.user_id = userID;
 
+    //stores only hashed password
     users[req.session.user_id] = {
-    "id": userID,
-    "email": userEmail,
-    "password": hashedPassword
-  };
+      "id": userID,
+      "email": userEmail,
+      "password": hashedPassword
+    };
 
-  res.redirect("/urls")
-}
-})
+    res.redirect("/urls");
+  }
+});
 
 app.get("/login", (req, res) => {
   const templateVars = {
     username: users[req.session.user_id]
 
-  }
-
-  if(users[req.session.user_id]) {
+  };
+  // if user already logged in, redirect to urls page
+  if (users[req.session.user_id]) {
     return res.redirect("/urls");
   }
 
-  res.render("login", templateVars)
-})
+  res.render("login", templateVars);
+});
 
 app.post("/login", (req, res) => {
   const inputEmail = req.body.email;
@@ -223,15 +315,28 @@ app.post("/login", (req, res) => {
   if (emailLookUp(inputEmail, users)) {
     userID = emailLookUp(inputEmail, users);
   } else {
-    res.status(403).send("Incorrect Username");
+    const templateVars = {
+      "error" : {
+        "msg": "Incorrect username!"
+      },
+      "username": users[req.session.user_id]
+    };
+    res.status(403).render('error', templateVars);
   }
 
-  if (!bcrypt.compareSync(inputPassword, users[userID]["password"])){
-    res.status(403).send("Incorrect password");
-  } else {  
-      req.session.user_id = userID;
-      res.redirect("/urls");
-}
+  // checks stored hashed password against user input password
+  if (!bcrypt.compareSync(inputPassword, users[userID]["password"])) {
+    const templateVars = {
+      "error" : {
+        "msg": "Incorrect password!"
+      },
+      "username": users[req.session.user_id]
+    };
+    res.status(403).render('error', templateVars);
+  } else {
+    req.session.user_id = userID;
+    res.redirect("/urls");
+  }
   
 });
 
@@ -240,9 +345,9 @@ app.post("/logout", (req, res) => {
   // Destroys cookie session
   req.session = null;
   res.redirect("/login");
-})
+});
 
 
 app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
+  console.log(`TinyApp Server listening on port ${PORT}!`);
 });
